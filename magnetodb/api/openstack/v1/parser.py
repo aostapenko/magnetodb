@@ -83,6 +83,7 @@ class Props():
     ATTRIBUTES_TO_GET = "attributes_to_get"
     CONSISTENT_READ = "consistent_read"
     KEY = "key"
+    KEYS = "keys"
 
     EXCLUSIVE_START_KEY = "exclusive_start_key"
     SCAN_FILTER = "scan_filter"
