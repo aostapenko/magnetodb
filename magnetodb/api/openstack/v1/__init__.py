@@ -65,7 +65,7 @@ openstack_api = [
           controller=create_resource(delete_item.DeleteItemController()),
           action="process_request"),
 
-    Route("batch_write_item", "/{project_id}/data/batch_get_item",
+    Route("batch_get_item", "/{project_id}/data/batch_get_item",
           conditions={'method': 'POST'},
           controller=create_resource(
               batch_get_item.BatchGetItemController()),

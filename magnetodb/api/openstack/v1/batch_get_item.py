@@ -59,10 +59,8 @@ class BatchGetItemController(object):
                 "type": "object",
                 "patternProperties": {
                     parser.TABLE_NAME_PATTERN: {
-                        "type": "array",
-                        "items": {
-                            REQUEST_GET_SCEMA
-                        }
+                        "type": "object",
+                        "items": REQUEST_GET_SCEMA
                     }
                 }
             }
@@ -74,6 +72,8 @@ class BatchGetItemController(object):
         jsonschema.validate(body, self.schema)
 
         # parse request_items
+        import pdb; pdb.set_trace()
+
         request_items = parser.Parser.parse_request_items(
             body[parser.Props.REQUEST_ITEMS])
 

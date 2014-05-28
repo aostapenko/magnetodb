@@ -891,6 +891,17 @@ class Parser():
                                 request_body[Props.KEY]))
 
     @classmethod
+    def parse_batch_get_request_items(cls, request_items_json):
+        for table_name, request_dict in request_items_json.iteritems():
+            for key in request_dict[Props.KEYS]:
+            for key, request_body in request_dict.iteritems():
+                for key, request_body in request_dict.iteritems():
+                        yield models.PutItemRequest(
+                            table_name,
+                            cls.parse_item_attributes(
+                                request_body[Props.ITEM]))
+
+    @classmethod
     def format_request_items(cls, request_items):
         res = {}
         for request in request_items:
