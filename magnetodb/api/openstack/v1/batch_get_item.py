@@ -72,9 +72,7 @@ class BatchGetItemController(object):
         jsonschema.validate(body, self.schema)
 
         # parse request_items
-        import pdb; pdb.set_trace()
-
-        request_items = parser.Parser.parse_request_items(
+        request_items = parser.Parser.parse_batch_get_request_items(
             body[parser.Props.REQUEST_ITEMS])
 
         req.context.tenant = project_id
@@ -83,9 +81,18 @@ class BatchGetItemController(object):
         for rq_item in request_items:
             request_list.append(rq_item)
 
-        unprocessed_items = storage.execute_get_batch(
+        result, unprocessed_items = storage.execute_get_batch(
             req.context, request_list)
 
+        responses = {
+            res.items[0].keys()[0]: parser.Parser.format_item_attributes(
+                res.items[0]) for res in result
+        }
+        for res in result:
+            item = res.items[0]
+
         return {
+            'responses': responses,
             'unprocessed_items': parser.Parser.format_request_items(
-                unprocessed_items)}
+                unprocessed_items)
+        }

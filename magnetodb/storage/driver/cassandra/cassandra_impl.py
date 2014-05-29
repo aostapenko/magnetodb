@@ -1100,31 +1100,6 @@ class CassandraStorageDriver(StorageDriver):
 
         return unprocessed_items
 
-    def execute_get_batch(self, context, get_request_list):
-        """
-        @param context: current request context
-        @param get_request_list: contains GetItemBatchableRequest items to
-                    perform batch
-
-        @return: List of unprocessed items
-
-        @raise BackendInteractionException
-        """
-
-        assert get_request_list
-        unprocessed_items = []
-        for req in get_request_list:
-            try:
-                if isinstance(req, models.GetItemRequest):
-                    self.select_item(context, req)
-                else:
-                    assert False, 'Wrong WriteItemRequest'
-            except exception.BackendInteractionException:
-                unprocessed_items.append(req)
-                LOG.exception("Can't process WriteItemRequest")
-
-        return unprocessed_items
-
     def update_item(self, context, table_name, key_attribute_map,
                     attribute_action_map, expected_condition_map=None):
         """

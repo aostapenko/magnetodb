@@ -892,14 +892,23 @@ class Parser():
 
     @classmethod
     def parse_batch_get_request_items(cls, request_items_json):
-        for table_name, request_dict in request_items_json.iteritems():
-            for key in request_dict[Props.KEYS]:
-            for key, request_body in request_dict.iteritems():
-                for key, request_body in request_dict.iteritems():
-                        yield models.PutItemRequest(
-                            table_name,
-                            cls.parse_item_attributes(
-                                request_body[Props.ITEM]))
+        for table_name, request_body in request_items_json.iteritems():
+            attributes_to_get = request_body.get(Props.ATTRIBUTES_TO_GET)
+            select_type = (
+                models.SelectType.all()
+                if attributes_to_get is None else
+                models.SelectType.specified_attributes(attributes_to_get)
+            )
+            for key in request_body[Props.KEYS]:
+                key_attr = cls.parse_item_attributes(key)
+                indexed_condition_map = {
+                    name: [models.IndexedCondition.eq(value)]
+                    for name, value in key_attr.iteritems()
+                }
+                yield models.GetItemRequest(
+                    table_name,
+                    indexed_condition_map,
+                    select_type=select_type)
 
     @classmethod
     def format_request_items(cls, request_items):
