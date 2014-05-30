@@ -395,14 +395,14 @@ class PutItemRequest(WriteItemBatchableRequest):
 
 
 class GetItemRequest(ModelBase):
-    def __init__(self, table_name, attribute_map, select_type):
+    def __init__(self, table_name, key_attribute_map, select_type):
         """
         @param table_name: String, name of table to get item from
         @param attribute_map: attribute name to AttributeValue mapping.
         """
         super(GetItemRequest, self).__init__(
             table_name=table_name,
-            attribute_map=attribute_map,
+            key_attribute_map=key_attribute_map,
             select_type=select_type
             )
 

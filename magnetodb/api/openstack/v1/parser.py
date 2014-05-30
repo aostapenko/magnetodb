@@ -943,6 +943,18 @@ class Parser():
 
             table_requests.append(request_json)
 
+    @classmethod
+    def format_batch_get_unprocessed(cls, request_items):
+        res = {}
+#        for request in request_items:
+#            tname = request.table_name
+#            if tname not in res:
+#                res[tname] = {Props.KEYS: []}
+#            attr_map = {}
+#            for key, value in request.key_attribute_map.iteritems():
+#                attr_map[key] = value[0]
+#            res[tname][Props.KEYS].append(cls.format_item_attributes(attr_map))
+
         return res
 
     @classmethod

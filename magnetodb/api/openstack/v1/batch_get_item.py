@@ -84,15 +84,15 @@ class BatchGetItemController(object):
         result, unprocessed_items = storage.execute_get_batch(
             req.context, request_list)
 
-        responses = {
-            res.items[0].keys()[0]: parser.Parser.format_item_attributes(
-                res.items[0]) for res in result
-        }
-        for res in result:
-            item = res.items[0]
+        responses = {}
+        for tname, res in result:
+            if tname not in responses:
+                responses[tname] = []
+            item = parser.Parser.format_item_attributes(res.items[0])
+            responses[tname].append(item)
 
         return {
             'responses': responses,
-            'unprocessed_items': parser.Parser.format_request_items(
+            'unprocessed_items': parser.Parser.format_batch_get_unprocessed(
                 unprocessed_items)
         }
