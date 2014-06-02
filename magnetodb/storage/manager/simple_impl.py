@@ -161,13 +161,14 @@ class SimpleStorageManager(StorageManager):
         for req in read_request_list:
             future_result = self.select_item_async(context,
                                                    req.table_name,
-                                                   req.key_attribute_map,
-                                                   req.select_type)
+                                                   req.indexed_condition_map,
+                                                   req.select_type,
+                                                   consistent=req.consistent)
 
-            def make_callback(table_name):
+            def make_callback(req):
                 def callback(res):
                     try:
-                        items.append((table_name, res.result()))
+                        items.append((req.table_name, res.result()))
                     except Exception:
                         unprocessed_items.append(req)
                         LOG.exception("Can't process GetItemRequest")
@@ -176,7 +177,7 @@ class SimpleStorageManager(StorageManager):
                         done_event.set()
                 return callback
 
-            future_result.add_done_callback(make_callback(req.table_name))
+            future_result.add_done_callback(make_callback(req))
 
         done_event.wait()
 

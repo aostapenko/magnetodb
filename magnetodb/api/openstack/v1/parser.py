@@ -894,6 +894,7 @@ class Parser():
     def parse_batch_get_request_items(cls, request_items_json):
         for table_name, request_body in request_items_json.iteritems():
             attributes_to_get = request_body.get(Props.ATTRIBUTES_TO_GET)
+            consistent = request_body.get(Props.CONSISTENT_READ, False)
             select_type = (
                 models.SelectType.all()
                 if attributes_to_get is None else
@@ -908,7 +909,8 @@ class Parser():
                 yield models.GetItemRequest(
                     table_name,
                     indexed_condition_map,
-                    select_type=select_type)
+                    select_type=select_type,
+                    consistent=consistent)
 
     @classmethod
     def format_request_items(cls, request_items):
@@ -943,6 +945,8 @@ class Parser():
 
             table_requests.append(request_json)
 
+        return res
+
     @classmethod
     def format_batch_get_unprocessed(cls, unprocessed):
         res = {}
@@ -951,10 +955,11 @@ class Parser():
             if tname not in res:
                 res[tname] = {Props.KEYS: []}
             attr_map = {}
-            for key, value in request.key_attribute_map.iteritems():
-                attr_map[key] = value[0]
+            for key, value in request.indexed_condition_map.iteritems():
+                attr_map[key] = value[0].arg
             res[tname][Props.KEYS].append(cls.format_item_attributes(attr_map))
-
+            res[tname][Props.ATTRIBUTES_TO_GET] = list(
+                request.select_type.attributes)
         return res
 
     @classmethod
