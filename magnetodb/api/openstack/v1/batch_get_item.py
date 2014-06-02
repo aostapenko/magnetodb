@@ -86,6 +86,8 @@ class BatchGetItemController(object):
 
         responses = {}
         for tname, res in result:
+            if not res.items:
+                continue
             if tname not in responses:
                 responses[tname] = []
             item = parser.Parser.format_item_attributes(res.items[0])
