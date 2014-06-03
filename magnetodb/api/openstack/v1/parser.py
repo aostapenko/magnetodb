@@ -952,9 +952,10 @@ class Parser():
         res = {}
         for request in unprocessed:
             tname = request.table_name
-            if tname not in res:
+            table_res = res.get(request.table_name, None)
+            if table_res is None:
                 table_res = {Props.KEYS: []}
-                res[tname] = table_res 
+                res[tname] = table_res
             attr_map = {}
             for key, value in request.indexed_condition_map.iteritems():
                 attr_map[key] = value[0].arg

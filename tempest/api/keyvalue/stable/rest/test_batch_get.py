@@ -159,8 +159,8 @@ class MagnetoDBBatchGetTest(MagnetoDBTestCase):
         request_body = {'request_items': {self.tname: {'keys': [key]}}}
         headers, body = self.client.batch_get_item(request_body)
         response_item = body['responses'][self.tname][0]
-        for attr in item.keys():
-            self.assertIn(attr, response_item)
+        for attribute in item.keys():
+            self.assertIn(attribute, response_item)
 
     @attr(type=['BGI-21'])
     def test_batch_get_attr_to_get_all(self):
@@ -193,8 +193,8 @@ class MagnetoDBBatchGetTest(MagnetoDBTestCase):
         }
         headers, body = self.client.batch_get_item(request_body)
         response_item = body['responses'][self.tname][0]
-        for attr in attr_to_get:
-            self.assertIn(attr, response_item)
+        for attribute in attr_to_get:
+            self.assertIn(attribute, response_item)
 
     @attr(type=['BGI-51'])
     def test_batch_get_consistent_read_true(self):
