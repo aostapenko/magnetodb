@@ -20,342 +20,91 @@ from tempest.common.utils.data_utils import rand_name
 from tempest.test import attr
 
 
-class MagnetoDBBatchWriteTest(MagnetoDBTestCase):
+class MagnetoDBBatchGetTest(MagnetoDBTestCase):
 
     def setUp(self):
-        super(MagnetoDBBatchWriteTest, self).setUp()
+        super(MagnetoDBBatchGetTest, self).setUp()
         self.tname = rand_name().replace('-', '')
 
-    @attr(type=['BWI-1'])
-    def test_batch_write_mandatory(self):
+    @attr(type=['BGI-1'])
+    def test_batch_get_mandatory(self):
         self._create_test_table(self.build_x_attrs('S'),
                                 self.tname,
                                 self.smoke_schema,
                                 wait_for_active=True)
         item = self.build_x_item('S', 'forum1', 'subject2',
                                  ('message', 'S', 'message text'))
-        request_body = {'request_items': {self.tname: [{'put_request':
-                                                        {'item': item}}]}}
-        headers, body = self.client.batch_write_item(request_body)
+        self.client.put_item(self.tname, item)
+        key = {self.hashkey: {'S': 'forum1'}, self.rangekey: {'S': 'subject2'}}
+        request_body = {'request_items': {self.tname: {'keys': [key]}}}
+        headers, body = self.client.batch_get_item(request_body)
         self.assertIn('unprocessed_items', body)
-        self.assertEqual(body['unprocessed_items'], {})
-        key_conditions = {
-            self.hashkey: {
-                'attribute_value_list': [{'S': 'forum1'}],
-                'comparison_operator': 'EQ'
-            }
-        }
-        headers, body = self.client.query(self.tname,
-                                          key_conditions=key_conditions,
-                                          consistent_read=True)
-        self.assertEqual(item, body['items'][0])
+        self.assertIn('responses', body)
+        expected_responses = {self.tname: [item]}
+        self.assertEqual({}, body['unprocessed_items'])
+        self.assertEqual(expected_responses, body['responses'])
 
-    @attr(type=['BWI-2'])
-    def test_batch_write_all_params(self):
+    @attr(type=['BGI-2'])
+    def test_batch_get_all_params(self):
         self._create_test_table(self.build_x_attrs('S'),
                                 self.tname,
                                 self.smoke_schema,
                                 wait_for_active=True)
         item = self.build_x_item('S', 'forum1', 'subject2',
                                  ('message', 'S', 'message text'))
-        request_body = {'request_items': {self.tname: [{'put_request':
-                                                        {'item': item}}]}}
-        headers, body = self.client.batch_write_item(request_body)
-        self.assertIn('unprocessed_items', body)
-        self.assertEqual(body['unprocessed_items'], {})
-        key_conditions = {
-            self.hashkey: {
-                'attribute_value_list': [{'S': 'forum1'}],
-                'comparison_operator': 'EQ'
-            }
-        }
-        headers, body = self.client.query(self.tname,
-                                          key_conditions=key_conditions,
-                                          consistent_read=True)
-        self.assertEqual(item, body['items'][0])
-
-    @attr(type=['BWI-10'])
-    def test_batch_write_put_n(self):
-        self._create_test_table(self.build_x_attrs('N'),
-                                self.tname,
-                                self.smoke_schema,
-                                wait_for_active=True)
-        item = self.build_x_item('N', '1000', '2000', ('message', 'N', '1001'))
-        request_body = {'request_items': {self.tname: [{'put_request':
-                                                        {'item': item}}]}}
-        headers, body = self.client.batch_write_item(request_body)
-        self.assertIn('unprocessed_items', body)
-        self.assertEqual(body['unprocessed_items'], {})
-        key_conditions = {
-            self.hashkey: {
-                'attribute_value_list': [{'N': '1000'}],
-                'comparison_operator': 'EQ'
-            }
-        }
-        headers, body = self.client.query(self.tname,
-                                          key_conditions=key_conditions,
-                                          consistent_read=True)
-        self.assertEqual(item, body['items'][0])
-
-    @attr(type=['BWI-13'])
-    def test_batch_write_put_n_ns(self):
-        self._create_test_table(self.build_x_attrs('N'),
-                                self.tname,
-                                self.smoke_schema,
-                                wait_for_active=True)
-        item = self.build_x_item('N', '1000', '2000',
-                                 ('message', 'NS', ['1001', '1002']))
-        request_body = {'request_items': {self.tname: [{'put_request':
-                                                        {'item': item}}]}}
-        headers, body = self.client.batch_write_item(request_body)
-        self.assertIn('unprocessed_items', body)
-        self.assertEqual(body['unprocessed_items'], {})
-        key_conditions = {
-            self.hashkey: {
-                'attribute_value_list': [{'N': '1000'}],
-                'comparison_operator': 'EQ'
-            }
-        }
-        headers, body = self.client.query(self.tname,
-                                          key_conditions=key_conditions,
-                                          consistent_read=True)
-        self.assertEqual(item, body['items'][0])
-
-    @attr(type=['BWI-36'])
-    def test_batch_write_delete_s(self):
-        self._create_test_table(self.smoke_attrs,
-                                self.tname,
-                                self.smoke_schema,
-                                wait_for_active=True)
-        self.put_smoke_item(self.tname, 'forum1', 'subject2',
-                            'message text', 'John', '10')
-        key_conditions = {
-            self.hashkey: {
-                'attribute_value_list': [{'S': 'forum1'}],
-                'comparison_operator': 'EQ'
-            },
-            self.rangekey: {
-                'attribute_value_list': [{'S': 'subject'}],
-                'comparison_operator': 'BEGINS_WITH'
-            }
-        }
-        headers, body = self.client.query(self.tname,
-                                          key_conditions=key_conditions,
-                                          consistent_read=True)
-        self.assertEqual(body['count'], 1)
-
+        self.client.put_item(self.tname, item)
         key = {self.hashkey: {'S': 'forum1'}, self.rangekey: {'S': 'subject2'}}
-        request_body = {'request_items': {self.tname: [{'delete_request':
-                                                        {'key': key}}]}}
-        headers, body = self.client.batch_write_item(request_body)
+        attr_to_get = ['forum']
+        request_body = {
+            'request_items':
+            {
+                self.tname:
+                {
+                    'keys': [key],
+                    'attributes_to_get': attr_to_get,
+                    'consistent_read': True
+                }
+            }
+        }
+        headers, body = self.client.batch_get_item(request_body)
         self.assertIn('unprocessed_items', body)
-        self.assertEqual(body['unprocessed_items'], {})
-        headers, body = self.client.query(self.tname,
-                                          key_conditions=key_conditions,
-                                          consistent_read=True)
-        self.assertEqual(0, body['count'])
+        self.assertIn('responses', body)
+        expected_responses = {self.tname: [{'forum': {'S': 'forum1'}}]}
+        self.assertEqual({}, body['unprocessed_items'])
+        self.assertEqual(expected_responses, body['responses'])
 
-    @attr(type=['BWI-53'])
-    def test_batch_write_delete(self):
-        self._create_test_table(self.smoke_attrs,
+    @attr(type=['BGI-3'])
+    def test_batch_get_one_table(self):
+        self._create_test_table(self.build_x_attrs('S'),
                                 self.tname,
                                 self.smoke_schema,
                                 wait_for_active=True)
-        self.put_smoke_item(self.tname, 'forum1', 'subject2',
-                            'message text', 'John', '10')
-        key_conditions = {
-            self.hashkey: {
-                'attribute_value_list': [{'S': 'forum1'}],
-                'comparison_operator': 'EQ'
-            },
-            self.rangekey: {
-                'attribute_value_list': [{'S': 'subject'}],
-                'comparison_operator': 'BEGINS_WITH'
-            }
-        }
-        headers, body = self.client.query(self.tname,
-                                          key_conditions=key_conditions,
-                                          consistent_read=True)
-        self.assertEqual(body['count'], 1)
-
+        item = self.build_x_item('S', 'forum1', 'subject2',
+                                 ('message', 'S', 'message text'))
+        self.client.put_item(self.tname, item)
         key = {self.hashkey: {'S': 'forum1'}, self.rangekey: {'S': 'subject2'}}
-        request_body = {'request_items': {self.tname: [{'delete_request':
-                                                        {'key': key}}]}}
-        headers, body = self.client.batch_write_item(request_body)
-        self.assertIn('unprocessed_items', body)
-        self.assertEqual(body['unprocessed_items'], {})
-        headers, body = self.client.query(self.tname,
-                                          key_conditions=key_conditions,
-                                          consistent_read=True)
-        self.assertEqual(0, body['count'])
+        request_body = {'request_items': {self.tname: {'keys': [key]}}}
+        headers, body = self.client.batch_get_item(request_body)
+        self.assertIn('responses', body)
+        self.assertIn(self.tname, body['responses'])
 
-    @attr(type=['BWI-40'])
-    def test_batch_write_put_delete(self):
-        self._create_test_table(self.smoke_attrs,
-                                self.tname,
-                                self.smoke_schema,
-                                wait_for_active=True)
-        self.put_smoke_item(self.tname, 'forum1', 'subject2',
-                            'message text', 'John', '10')
-        key_conditions = {
-            self.hashkey: {
-                'attribute_value_list': [{'S': 'forum1'}],
-                'comparison_operator': 'EQ'
-            },
-            self.rangekey: {
-                'attribute_value_list': [{'S': 'subject'}],
-                'comparison_operator': 'BEGINS_WITH'
-            }
-        }
-        headers, body = self.client.query(self.tname,
-                                          key_conditions=key_conditions,
-                                          consistent_read=True)
-        self.assertEqual(body['count'], 1)
-
-        item = self.build_smoke_item('forum1', 'subject3',
-                                     'message text', 'John', '10')
-
-        key = {self.hashkey: {'S': 'forum1'}, self.rangekey: {'S': 'subject2'}}
-        request_body = {'request_items': {self.tname: [{'delete_request':
-                                                        {'key': key}},
-                                                       {'put_request':
-                                                        {'item': item}}]}}
-        headers, body = self.client.batch_write_item(request_body)
-        self.assertIn('unprocessed_items', body)
-        self.assertEqual(body['unprocessed_items'], {})
-        headers, body = self.client.query(self.tname,
-                                          key_conditions=key_conditions,
-                                          consistent_read=True)
-        self.assertEqual(1, body['count'])
-        self.assertIn(item, body['items'])
-
-    @attr(type=['BWI-51'])
-    def test_batch_write_put_25_tables(self):
-        tnames = [rand_name().replace('-', '') for i in range(0, 25)]
-        for tname in tnames:
-            self._create_test_table(self.smoke_attrs,
+    @attr(type=['BGI-4'])
+    def test_batch_get_several_tables(self):
+        tables = []
+        item = self.build_x_item('S', 'forum1', 'subject2',
+                                 ('message', 'S', 'message text'))
+        for i in range(0, 3):
+            tname = rand_name().replace('-', '')
+            tables.append(tname)
+            self._create_test_table(self.build_x_attrs('S'),
                                     tname,
                                     self.smoke_schema,
                                     wait_for_active=True)
-        item = self.build_smoke_item('forum1', 'subject3',
-                                     'message text', 'John', '10')
-        request_body = {'request_items': dict(
-            (tname, [{'put_request': {'item': item}}]) for tname in tnames)}
+            self.client.put_item(tname, item)
 
-        key_conditions = {
-            self.hashkey: {
-                'attribute_value_list': [{'S': 'forum1'}],
-                'comparison_operator': 'EQ'
-            },
-            self.rangekey: {
-                'attribute_value_list': [{'S': 'subject'}],
-                'comparison_operator': 'BEGINS_WITH'
-            }
-        }
-        headers, body = self.client.batch_write_item(request_body)
-        self.assertIn('unprocessed_items', body)
-        self.assertEqual(body['unprocessed_items'], {})
-        for tname in tnames:
-            headers, body = self.client.query(tname,
-                                              key_conditions=key_conditions,
-                                              consistent_read=True)
-            self.assertEqual(1, body['count'])
-            self.assertIn(item, body['items'])
-
-    @attr(type=['BWI-16'])
-    def test_batch_write_put_s(self):
-        self._create_test_table(self.build_x_attrs('S'),
-                                self.tname,
-                                self.smoke_schema,
-                                wait_for_active=True)
-        item = self.build_x_item('S', 'forum1', 'subject2',
-                                 ('message', 'S', 'message text'))
-        request_body = {'request_items': {self.tname: [{'put_request':
-                                                        {'item': item}}]}}
-        headers, body = self.client.batch_write_item(request_body)
-        self.assertIn('unprocessed_items', body)
-        self.assertEqual(body['unprocessed_items'], {})
-        key_conditions = {
-            self.hashkey: {
-                'attribute_value_list': [{'S': 'forum1'}],
-                'comparison_operator': 'EQ'
-            }
-        }
-        headers, body = self.client.query(self.tname,
-                                          key_conditions=key_conditions,
-                                          consistent_read=True)
-        self.assertEqual(item, body['items'][0])
-
-    @attr(type=['BWI-14'])
-    def test_batch_write_put_b(self):
-        self._create_test_table(self.build_x_attrs('S'),
-                                self.tname,
-                                self.smoke_schema,
-                                wait_for_active=True)
-        value = base64.b64encode('\xFF')
-        item = self.build_x_item('S', 'forum1', 'subject2',
-                                 ('message', 'B', value))
-        request_body = {'request_items': {self.tname: [{'put_request':
-                                                        {'item': item}}]}}
-        headers, body = self.client.batch_write_item(request_body)
-        self.assertIn('unprocessed_items', body)
-        self.assertEqual(body['unprocessed_items'], {})
-        key_conditions = {
-            self.hashkey: {
-                'attribute_value_list': [{'S': 'forum1'}],
-                'comparison_operator': 'EQ'
-            }
-        }
-        headers, body = self.client.query(self.tname,
-                                          key_conditions=key_conditions,
-                                          consistent_read=True)
-        self.assertEqual(item, body['items'][0])
-
-    @attr(type=['BWI-15'])
-    def test_batch_write_put_bs(self):
-        self._create_test_table(self.build_x_attrs('S'),
-                                self.tname,
-                                self.smoke_schema,
-                                wait_for_active=True)
-        value1 = base64.b64encode('\xFF\x01')
-        value2 = base64.b64encode('\xFF\x02')
-        item = self.build_x_item('S', 'forum1', 'subject2',
-                                 ('message', 'BS', [value1, value2]))
-        request_body = {'request_items': {self.tname: [{'put_request':
-                                                        {'item': item}}]}}
-        headers, body = self.client.batch_write_item(request_body)
-        self.assertIn('unprocessed_items', body)
-        self.assertEqual(body['unprocessed_items'], {})
-        key_conditions = {
-            self.hashkey: {
-                'attribute_value_list': [{'S': 'forum1'}],
-                'comparison_operator': 'EQ'
-            }
-        }
-        headers, body = self.client.query(self.tname,
-                                          key_conditions=key_conditions,
-                                          consistent_read=True)
-        self.assertEqual(item, body['items'][0])
-
-    @attr(type=['BWI-50'])
-    def test_batch_write_correct_tname_and_put_request(self):
-        self._create_test_table(self.build_x_attrs('S'),
-                                self.tname,
-                                self.smoke_schema,
-                                wait_for_active=True)
-        item = self.build_x_item('S', 'forum1', 'subject2')
-        request_body = {'request_items': {self.tname: [{'put_request':
-                                                        {'item': item}}]}}
-        headers, body = self.client.batch_write_item(request_body)
-        self.assertIn('unprocessed_items', body)
-        self.assertEqual(body['unprocessed_items'], {})
-        key_conditions = {
-            self.hashkey: {
-                'attribute_value_list': [{'S': 'forum1'}],
-                'comparison_operator': 'EQ'
-            }
-        }
-        headers, body = self.client.query(self.tname,
-                                          key_conditions=key_conditions,
-                                          consistent_read=True)
-        self.assertEqual(item, body['items'][0])
+        key = {self.hashkey: {'S': 'forum1'}, self.rangekey: {'S': 'subject2'}}
+        request_body = {'request_items': {tname:
+            {'keys': [key]} for tname in tables}}
+        headers, body = self.client.batch_get_item(request_body)
+        self.assertIn('responses', body)
+        self.assertEqual(set(tables), set(body['responses'].keys()))
