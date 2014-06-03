@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import base64
-
 from tempest.api.keyvalue.rest_base.base import MagnetoDBTestCase
 from tempest.common.utils.data_utils import rand_name
 from tempest.test import attr
@@ -54,7 +52,7 @@ class MagnetoDBBatchGetTest(MagnetoDBTestCase):
                                  ('message', 'S', 'message text'))
         self.client.put_item(self.tname, item)
         key = {self.hashkey: {'S': 'forum1'}, self.rangekey: {'S': 'subject2'}}
-        attr_to_get = ['forum']
+        attr_to_get = [self.hashkey]
         request_body = {
             'request_items':
             {
@@ -85,7 +83,6 @@ class MagnetoDBBatchGetTest(MagnetoDBTestCase):
         key = {self.hashkey: {'S': 'forum1'}, self.rangekey: {'S': 'subject2'}}
         request_body = {'request_items': {self.tname: {'keys': [key]}}}
         headers, body = self.client.batch_get_item(request_body)
-        self.assertIn('responses', body)
         self.assertIn(self.tname, body['responses'])
 
     @attr(type=['BGI-4'])
@@ -104,7 +101,128 @@ class MagnetoDBBatchGetTest(MagnetoDBTestCase):
 
         key = {self.hashkey: {'S': 'forum1'}, self.rangekey: {'S': 'subject2'}}
         request_body = {'request_items': {tname:
-            {'keys': [key]} for tname in tables}}
+                        {'keys': [key]} for tname in tables}}
         headers, body = self.client.batch_get_item(request_body)
-        self.assertIn('responses', body)
         self.assertEqual(set(tables), set(body['responses'].keys()))
+
+    @attr(type=['BGI-5'])
+    def test_batch_get_table_name_3_symb(self):
+        tname = 'xyz'
+        self._create_test_table(self.build_x_attrs('S'),
+                                tname,
+                                self.smoke_schema,
+                                wait_for_active=True)
+        item = self.build_x_item('S', 'forum1', 'subject2',
+                                 ('message', 'S', 'message text'))
+        self.client.put_item(tname, item)
+        key = {self.hashkey: {'S': 'forum1'}, self.rangekey: {'S': 'subject2'}}
+        request_body = {'request_items': {tname: {'keys': [key]}}}
+        headers, body = self.client.batch_get_item(request_body)
+        self.assertIn(tname, body['responses'])
+
+    @attr(type=['BGI-90'])
+    def test_batch_get_99_items(self):
+        self._batch_get_n_items(99)
+
+    @attr(type=['BGI-91'])
+    def test_batch_get_100_items(self):
+        self._batch_get_n_items(100)
+
+    def _batch_get_n_items(self, items_count):
+        self._create_test_table(self.build_x_attrs('S'),
+                                self.tname,
+                                self.smoke_schema,
+                                wait_for_active=True)
+        items = []
+        for i in range(0, items_count):
+            item = self.build_x_item('S', 'forum1', 'subject' + str(i),
+                                     ('message', 'S', 'message text'))
+            items.append(item)
+            self.client.put_item(self.tname, item)
+        keys = [{self.hashkey: {'S': 'forum1'},
+                 self.rangekey: {'S': 'subject' + str(i)}}
+                for i in range(0, items_count)]
+        request_body = {'request_items': {self.tname: {'keys': keys}}}
+        headers, body = self.client.batch_get_item(request_body)
+        self.assertEqual(items_count, len(body['responses'][self.tname]))
+
+    @attr(type=['BGI-20'])
+    def test_batch_get_no_attr_to_get(self):
+        self._create_test_table(self.build_x_attrs('S'),
+                                self.tname,
+                                self.smoke_schema,
+                                wait_for_active=True)
+        item = self.build_x_item('S', 'forum1', 'subject2',
+                                 ('message', 'S', 'message text'))
+        self.client.put_item(self.tname, item)
+        key = {self.hashkey: {'S': 'forum1'}, self.rangekey: {'S': 'subject2'}}
+        request_body = {'request_items': {self.tname: {'keys': [key]}}}
+        headers, body = self.client.batch_get_item(request_body)
+        response_item = body['responses'][self.tname][0]
+        for attr in item.keys():
+            self.assertIn(attr, response_item)
+
+    @attr(type=['BGI-21'])
+    def test_batch_get_attr_to_get_all(self):
+        attr_to_get = [self.hashkey, self.rangekey, 'message']
+        self._batch_get_attr_to_get(attr_to_get)
+
+    @attr(type=['BGI-22'])
+    def test_batch_get_attr_to_get_some(self):
+        attr_to_get = [self.rangekey, 'message']
+        self._batch_get_attr_to_get(attr_to_get)
+
+    def _batch_get_attr_to_get(self, attr_to_get):
+        self._create_test_table(self.build_x_attrs('S'),
+                                self.tname,
+                                self.smoke_schema,
+                                wait_for_active=True)
+        item = self.build_x_item('S', 'forum1', 'subject2',
+                                 ('message', 'S', 'message text'))
+        self.client.put_item(self.tname, item)
+        key = {self.hashkey: {'S': 'forum1'}, self.rangekey: {'S': 'subject2'}}
+        request_body = {
+            'request_items':
+            {
+                self.tname:
+                {
+                    'keys': [key],
+                    'attributes_to_get': attr_to_get
+                }
+            }
+        }
+        headers, body = self.client.batch_get_item(request_body)
+        response_item = body['responses'][self.tname][0]
+        for attr in attr_to_get:
+            self.assertIn(attr, response_item)
+
+    @attr(type=['BGI-51'])
+    def test_batch_get_consistent_read_true(self):
+        self._batch_get_consistent_read(True)
+
+    @attr(type=['BGI-52'])
+    def test_batch_get_consistent_read_false(self):
+        self._batch_get_consistent_read(False)
+
+    def _batch_get_consistent_read(self, consistent_read):
+        self._create_test_table(self.build_x_attrs('S'),
+                                self.tname,
+                                self.smoke_schema,
+                                wait_for_active=True)
+        item = self.build_x_item('S', 'forum1', 'subject2',
+                                 ('message', 'S', 'message text'))
+        self.client.put_item(self.tname, item)
+        key = {self.hashkey: {'S': 'forum1'}, self.rangekey: {'S': 'subject2'}}
+        request_body = {
+            'request_items':
+            {
+                self.tname:
+                {
+                    'keys': [key],
+                    'consistent_read': consistent_read
+                }
+            }
+        }
+        headers, body = self.client.batch_get_item(request_body)
+        if consistent_read:
+            self.assertIn(item, body['responses'][self.tname])
