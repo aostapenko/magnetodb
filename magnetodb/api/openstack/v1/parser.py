@@ -948,18 +948,23 @@ class Parser():
         return res
 
     @classmethod
-    def format_batch_get_unprocessed(cls, unprocessed):
+    def format_batch_get_unprocessed(cls, unprocessed, request_items):
         res = {}
         for request in unprocessed:
             tname = request.table_name
             if tname not in res:
-                res[tname] = {Props.KEYS: []}
+                table_res = {Props.KEYS: []}
+                res[tname] = table_res 
             attr_map = {}
             for key, value in request.indexed_condition_map.iteritems():
                 attr_map[key] = value[0].arg
-            res[tname][Props.KEYS].append(cls.format_item_attributes(attr_map))
-            res[tname][Props.ATTRIBUTES_TO_GET] = list(
-                request.select_type.attributes)
+            table_res[Props.KEYS].append(cls.format_item_attributes(attr_map))
+            attr_to_get = request_items[tname].get(Props.ATTRIBUTES_TO_GET)
+            consistent = request_items[tname].get(Props.CONSISTENT_READ)
+            if attr_to_get:
+                table_res[Props.ATTRIBUTES_TO_GET] = attr_to_get
+            if consistent:
+                table_res[Props.CONSISTENT_READ] = consistent
         return res
 
     @classmethod

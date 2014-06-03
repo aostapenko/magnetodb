@@ -92,9 +92,9 @@ class BatchGetItemController(object):
                 responses[tname] = []
             item = parser.Parser.format_item_attributes(res.items[0])
             responses[tname].append(item)
-
+        
         return {
             'responses': responses,
             'unprocessed_items': parser.Parser.format_batch_get_unprocessed(
-                unprocessed_items)
+                unprocessed_items, body[parser.Props.REQUEST_ITEMS])
         }
