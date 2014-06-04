@@ -193,6 +193,7 @@ class CassandraStorageDriver(StorageDriver):
         cas_table_name = USER_PREFIX + table_name
         cas_keyspace = USER_PREFIX + context.tenant
 
+        self._create_keyspace_if_not_exists(cas_keyspace)
         key_count = len(table_schema.key_attributes)
 
         if key_count < 1 or key_count > 2:
@@ -282,6 +283,22 @@ class CassandraStorageDriver(StorageDriver):
         )
 
         LOG.debug("Waiting for schema agreement... Done")
+
+    def _create_keyspace_if_not_exists(self, cas_keyspace):
+        import pdb; pdb.set_trace()
+
+        query_builder = [
+            "DESCRIBE TABLE ", "magnetodb.table_info"#cas_keyspace
+        ]
+        self.__cluster_handler.execute_query(
+                "".join(query_builder))
+
+        replication = "{'class': 'SimpleStrategy', 'replication_factor': 3}"
+        query_builder = [
+            "CREATE KEYSPACE IF NOT EXISTS ",
+            cas_keyspace, " WITH replication = ", replication
+        ]
+        self.__cluster_handler.execute_query("".join(query_builder))
 
     @staticmethod
     def _append_types_system_attr_value(table_schema, attribute_map,
