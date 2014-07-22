@@ -153,13 +153,9 @@ ITEM = {
 }
 
 ITEM_UPDATE = {
-    "hash_attr": {
+    "inumber": {
         "action": "PUT",
-        "value": {"S": "1"},
-    },
-    "range_attr": {
-        "action": "PUT",
-        "value": {"S": "1"},
+        "value": {"N": "1"},
     }
 }
 
@@ -168,6 +164,12 @@ INDEX_NAME_N = "by_number"
 OPERATIONS_DICT = {
     "delete_table": {
         "method": "delete_table",
+        "kwargs": {
+            "table_name": TABLE_NAME
+        }
+    },
+    "describe_table": {
+        "method": "describe_table",
         "kwargs": {
             "table_name": TABLE_NAME
         }
@@ -230,14 +232,18 @@ class MagnetoDBTableOperationsTestCase(MagnetoDBTestCase):
 
     tenant_isolation = True
 
-    def test_operations_with_nonexistent_table(self):
+    def test_table_operations(self):
+        tname = rand_name().replace('-', '')
+
         headers, body = self.client.list_tables()
         self.assertEqual(body, {'tables': []})
 
         operations = ["delete_table", "get_item", "query", "query_by_index",
-                      "scan", "put_item", "update_item", "delete_item"]
+                      "scan", "put_item", "update_item",
+                      "delete_item", "describe_table"]
         for op in operations:
-            kwargs = OPERATIONS_DICT[op].get('kwargs', {})
+            kwargs = OPERATIONS_DICT[op]['kwargs'].update(
+                {'table_name': tname})
             with self.assertRaises(exceptions.NotFound) as r_exc:
                 (getattr(self.client, OPERATIONS_DICT[op]['method'])(**kwargs))
             message = r_exc.exception._error_string
@@ -259,7 +265,7 @@ class MagnetoDBTableOperationsTestCase(MagnetoDBTestCase):
                 KEY_SCHEMA,
                 LSI_INDEXES)
 
-        self.wait_for_table_active(TABLE_NAME)
+        self.assertTrue(self.wait_for_table_active(TABLE_NAME))
 
         with self.assertRaises(exceptions.BadRequest) as r_exc:
             headers, body = self.client.create_table(
@@ -272,11 +278,18 @@ class MagnetoDBTableOperationsTestCase(MagnetoDBTestCase):
         self.assertEqual(1, len(body['tables']))
         self.assertEqual(TABLE_NAME, body['tables'][0]['href'])
 
+        operations = ["get_item", "query", "query_by_index",
+                      "scan", "put_item", "describe_table", "update_item",
+                      "delete_item", "describe_table", "delete_table"]
         for op in operations:
-            kwargs = OPERATIONS_DICT[op].get('kwargs', {})
+            kwargs = OPERATIONS_DICT[op]['kwargs'].update(
+                {'table_name': tname})
             getattr(self.client, OPERATIONS_DICT[op]['method'])(**kwargs)
 
-        
+        self.assertTrue(self.wait_for_table_deleted(TABLE_NAME))
+
+        headers, body = self.client.list_tables()
+        self.assertEqual(body, {'tables': []})
 
 #    def setUp(self):
 #        super(MagnetoDBListTableTestCase, self).setUp()

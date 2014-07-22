@@ -134,7 +134,8 @@ class MagnetoDBTestCase(tempest.test.BaseTestCase):
 
     def wait_for_table_deleted(self, table_name, timeout=120, interval=3):
         def check():
-            return table_name not in self.client.list_tables()['table_names']
+            names = [d['href'] for d in self.client.list_tables()[1]['tables']]
+            return table_name not in names
 
         return tempest.test.call_until_true(check, timeout, interval)
 
