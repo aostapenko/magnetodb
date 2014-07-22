@@ -21,91 +21,92 @@ from tempest import exceptions
 from tempest import test
 
 
-TABLE_DESC = {
-    "attribute_definitions": [
-        {
-            "attribute_name": "hash_attr",
-            "attribute_type": "S"
-        },
-        {
-            "attribute_name": "range_attr",
-            "attribute_type": "S"
-        },
-        {
-            "attribute_name": "istr",
-            "attribute_type": "S"
-        },
-        {
-            "attribute_name": "inumber",
-            "attribute_type": "N"
-        },
-        {
-            "attribute_name": "iblob",
-            "attribute_type": "B"
-        }
-    ],
-    "key_schema": [
-        {
-            "attribute_name": "hash_attr",
-            "key_type": "HASH"
-        },
-        {
-            "attribute_name": "range_attr",
-            "key_type": "RANGE"
-        }
-    ],
-    "local_secondary_indexes": [
-        {
-            "index_name": "by_str",
-            "key_schema": [
-                {
-                    "attribute_name": "hash_attr",
-                    "key_type": "HASH"
-                },
-                {
-                    "attribute_name": "istr",
-                    "key_type": "RANGE"
-                }
-            ],
-            "projection": {
-                "projection_type": "ALL"
+ATTRIBUTE_DEFINITIONS = [
+    {
+        "attribute_name": "hash_attr",
+        "attribute_type": "S"
+    },
+    {
+        "attribute_name": "range_attr",
+        "attribute_type": "S"
+    },
+    {
+        "attribute_name": "istr",
+        "attribute_type": "S"
+    },
+    {
+        "attribute_name": "inumber",
+        "attribute_type": "N"
+    },
+    {
+        "attribute_name": "iblob",
+        "attribute_type": "B"
+    }
+]
+
+KEY_SCHEMA = [
+    {
+        "attribute_name": "hash_attr",
+        "key_type": "HASH"
+    },
+    {
+        "attribute_name": "range_attr",
+        "key_type": "RANGE"
+    }
+]
+
+LSI_INDEXES = [
+    {
+        "index_name": "by_str",
+        "key_schema": [
+            {
+                "attribute_name": "hash_attr",
+                "key_type": "HASH"
+            },
+            {
+                "attribute_name": "istr",
+                "key_type": "RANGE"
             }
-        },
-        {
-            "index_name": "by_number",
-            "key_schema": [
-                {
-                    "attribute_name": "hash_attr",
-                    "key_type": "HASH"
-                },
-                {
-                    "attribute_name": "inumber",
-                    "key_type": "RANGE"
-                }
-            ],
-            "projection": {
-                "projection_type": "ALL"
-            }
-        },
-        {
-            "index_name": "by_blob",
-            "key_schema": [
-                {
-                    "attribute_name": "hash_attr",
-                    "key_type": "HASH"
-                },
-                {
-                    "attribute_name": "iblob",
-                    "key_type": "RANGE"
-                }
-            ],
-            "projection": {
-                "projection_type": "ALL"
-            }
+        ],
+        "projection": {
+            "projection_type": "ALL"
         }
-    ],
-    "table_name": "atable"
-}
+    },
+    {
+        "index_name": "by_number",
+        "key_schema": [
+            {
+                "attribute_name": "hash_attr",
+                "key_type": "HASH"
+            },
+            {
+                "attribute_name": "inumber",
+                "key_type": "RANGE"
+            }
+        ],
+        "projection": {
+            "projection_type": "ALL"
+        }
+    },
+    {
+        "index_name": "by_blob",
+        "key_schema": [
+            {
+                "attribute_name": "hash_attr",
+                "key_type": "HASH"
+            },
+            {
+                "attribute_name": "iblob",
+                "key_type": "RANGE"
+            }
+        ],
+        "projection": {
+            "projection_type": "ALL"
+        }
+    }
+]
+
+TABLE_NAME = 'atable'
 
 ITEM_PRIMARY_KEY = {
     "hash_attr": {"S": "1"},
@@ -167,56 +168,65 @@ INDEX_NAME_N = "by_number"
 OPERATIONS_DICT = {
     "delete_table": {
         "method": "delete_table",
-        "kwargs": {}
+        "kwargs": {
+            "table_name": TABLE_NAME
+        }
     },
     "get_item": {
         "method": "get_item",
         "kwargs": {
-            "key": ITEM_PRIMARY_KEY
+            "key": ITEM_PRIMARY_KEY,
+            "table_name": TABLE_NAME
         }
     },
     "query": {
         "method": "query",
         "kwargs": {
-            "key_conditions": KEY_CONDITIONS
+            "key_conditions": KEY_CONDITIONS,
+            "table_name": TABLE_NAME
         }
     },
     "query_by_index": {
         "method": "query",
         "kwargs": {
             "key_conditions": KEY_CONDITIONS_INDEX,
-            "index_name": INDEX_NAME_N
+            "index_name": INDEX_NAME_N,
+            "table_name": TABLE_NAME
         }
     },
     "scan": {
         "method": "scan",
         "kwargs": {
-            "scan_filter": SCAN_FILTER
+            "scan_filter": SCAN_FILTER,
+            "table_name": TABLE_NAME
         }
     },
     "put_item": {
         "method": "put_item",
         "kwargs": {
-            "item": ITEM
+            "item": ITEM,
+            "table_name": TABLE_NAME
         }
     },
     "update_item": {
         "method": "update_item",
         "kwargs": {
             "key": ITEM_PRIMARY_KEY,
-            "attribute_updates": ITEM_UPDATE
+            "attribute_updates": ITEM_UPDATE,
+            "table_name": TABLE_NAME
         }
     },
     "delete_item": {
         "method": "delete_item",
         "kwargs": {
-            "key": ITEM_PRIMARY_KEY
+            "key": ITEM_PRIMARY_KEY,
+            "table_name": TABLE_NAME
         }
     }
 }
 
 
-class MagnetoDBTableNotExistsOpTestCase(MagnetoDBTestCase):
+class MagnetoDBTableOperationsTestCase(MagnetoDBTestCase):
 
     tenant_isolation = True
 
@@ -224,15 +234,49 @@ class MagnetoDBTableNotExistsOpTestCase(MagnetoDBTestCase):
         headers, body = self.client.list_tables()
         self.assertEqual(body, {'tables': []})
 
-        table_name = 'non-existent-table'
         operations = ["delete_table", "get_item", "query", "query_by_index",
                       "scan", "put_item", "update_item", "delete_item"]
         for op in operations:
+            kwargs = OPERATIONS_DICT[op].get('kwargs', {})
             with self.assertRaises(exceptions.NotFound) as r_exc:
-                (getattr(self.client, OPERATIONS_DICT[op]['method'])
-                (table_name, **OPERATIONS_DICT[op]['kwargs']))
+                (getattr(self.client, OPERATIONS_DICT[op]['method'])(**kwargs))
             message = r_exc.exception._error_string
-            self.assertIn("'%s' does not exist" % table_name, message)
+            self.assertIn("'%s' does not exist" % TABLE_NAME, message)
+
+        headers, body = self.client.list_tables()
+        self.assertEqual(body, {'tables': []})
+
+        headers, body = self.client.create_table(
+            ATTRIBUTE_DEFINITIONS,
+            TABLE_NAME,
+            KEY_SCHEMA,
+            LSI_INDEXES)
+
+        with self.assertRaises(exceptions.BadRequest) as r_exc:
+            headers, body = self.client.create_table(
+                ATTRIBUTE_DEFINITIONS,
+                TABLE_NAME,
+                KEY_SCHEMA,
+                LSI_INDEXES)
+
+        self.wait_for_table_active(TABLE_NAME)
+
+        with self.assertRaises(exceptions.BadRequest) as r_exc:
+            headers, body = self.client.create_table(
+                ATTRIBUTE_DEFINITIONS,
+                TABLE_NAME,
+                KEY_SCHEMA,
+                LSI_INDEXES)
+
+        headers, body = self.client.list_tables()
+        self.assertEqual(1, len(body['tables']))
+        self.assertEqual(TABLE_NAME, body['tables'][0]['href'])
+
+        for op in operations:
+            kwargs = OPERATIONS_DICT[op].get('kwargs', {})
+            getattr(self.client, OPERATIONS_DICT[op]['method'])(**kwargs)
+
+        
 
 #    def setUp(self):
 #        super(MagnetoDBListTableTestCase, self).setUp()
