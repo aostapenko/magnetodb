@@ -152,7 +152,7 @@ ITEM = {
     "inumber": {"N": "1"},
 }
 
-ITEM_UPDATE = {
+ATTRIBUTES_UPDATE = {
     "inumber": {
         "action": "PUT",
         "value": {"N": "1"},
@@ -161,76 +161,17 @@ ITEM_UPDATE = {
 
 INDEX_NAME_N = "by_number"
 
-OPERATIONS_DICT = {
-    "delete_table": {
-        "method": "delete_table",
-        "kwargs": {
-            "table_name": TABLE_NAME
-        }
-    },
-    "describe_table": {
-        "method": "describe_table",
-        "kwargs": {
-            "table_name": TABLE_NAME
-        }
-    },
-    "get_item": {
-        "method": "get_item",
-        "kwargs": {
-            "key": ITEM_PRIMARY_KEY,
-            "table_name": TABLE_NAME
-        }
-    },
-    "query": {
-        "method": "query",
-        "kwargs": {
-            "key_conditions": KEY_CONDITIONS,
-            "table_name": TABLE_NAME
-        }
-    },
-    "query_by_index": {
-        "method": "query",
-        "kwargs": {
-            "key_conditions": KEY_CONDITIONS_INDEX,
-            "index_name": INDEX_NAME_N,
-            "table_name": TABLE_NAME
-        }
-    },
-    "scan": {
-        "method": "scan",
-        "kwargs": {
-            "scan_filter": SCAN_FILTER,
-            "table_name": TABLE_NAME
-        }
-    },
-    "put_item": {
-        "method": "put_item",
-        "kwargs": {
-            "item": ITEM,
-            "table_name": TABLE_NAME
-        }
-    },
-    "update_item": {
-        "method": "update_item",
-        "kwargs": {
-            "key": ITEM_PRIMARY_KEY,
-            "attribute_updates": ITEM_UPDATE,
-            "table_name": TABLE_NAME
-        }
-    },
-    "delete_item": {
-        "method": "delete_item",
-        "kwargs": {
-            "key": ITEM_PRIMARY_KEY,
-            "table_name": TABLE_NAME
-        }
-    }
-}
-
 
 class MagnetoDBTableOperationsTestCase(MagnetoDBTestCase):
 
     tenant_isolation = True
+
+    def _check_exception(self, expected_exc, expected_message, method, *args,
+                         **kwargs):
+        with self.assertRaises(expected_exc) as r_exc:
+            getattr(self.client, method)(*args, **kwargs)
+        message = r_exc.exception._error_string
+        self.assertIn(expected_message, message)
 
     def test_table_operations(self):
         tname = rand_name().replace('-', '')
@@ -238,58 +179,104 @@ class MagnetoDBTableOperationsTestCase(MagnetoDBTestCase):
         headers, body = self.client.list_tables()
         self.assertEqual(body, {'tables': []})
 
-        operations = ["delete_table", "get_item", "query", "query_by_index",
-                      "scan", "put_item", "update_item",
-                      "delete_item", "describe_table"]
-        for op in operations:
-            kwargs = OPERATIONS_DICT[op]['kwargs'].update(
-                {'table_name': tname})
-            with self.assertRaises(exceptions.NotFound) as r_exc:
-                (getattr(self.client, OPERATIONS_DICT[op]['method'])(**kwargs))
-            message = r_exc.exception._error_string
-            self.assertIn("'%s' does not exist" % TABLE_NAME, message)
+        not_found_msg = "'%s' does not exist" % tname
+        self._check_exception(exceptions.NotFound, not_found_msg,
+                              'delete_table', tname)
+        self._check_exception(exceptions.NotFound, not_found_msg,
+                              'get_item', tname, ITEM_PRIMARY_KEY)
+        self._check_exception(exceptions.NotFound, not_found_msg,
+                              'query', tname, key_conditions=KEY_CONDITIONS)
+        self._check_exception(exceptions.NotFound, not_found_msg,
+                              'query', tname, index_name=INDEX_NAME_N,
+                              key_conditions=KEY_CONDITIONS_INDEX)
+        self._check_exception(exceptions.NotFound, not_found_msg,
+                              'scan', tname, scan_filter=SCAN_FILTER)
+        self._check_exception(exceptions.NotFound, not_found_msg,
+                              'put_item', tname, ITEM)
+        self._check_exception(exceptions.NotFound, not_found_msg,
+                              'update_item', tname, ITEM_PRIMARY_KEY,
+                              ATTRIBUTES_UPDATE)
+        self._check_exception(exceptions.NotFound, not_found_msg,
+                              'delete_item', tname, ITEM_PRIMARY_KEY)
+        self._check_exception(exceptions.NotFound, not_found_msg,
+                              'describe_table', tname)
 
         headers, body = self.client.list_tables()
         self.assertEqual(body, {'tables': []})
 
         headers, body = self.client.create_table(
             ATTRIBUTE_DEFINITIONS,
-            TABLE_NAME,
+            tname,
             KEY_SCHEMA,
             LSI_INDEXES)
 
-        with self.assertRaises(exceptions.BadRequest) as r_exc:
-            headers, body = self.client.create_table(
-                ATTRIBUTE_DEFINITIONS,
-                TABLE_NAME,
-                KEY_SCHEMA,
-                LSI_INDEXES)
+        exc_message = 'Table %s already exists' % tname
+        self._check_exception(exceptions.BadRequest, exc_message,
+                              'create_table',
+                              ATTRIBUTE_DEFINITIONS,
+                              tname,
+                              KEY_SCHEMA,
+                              LSI_INDEXES)
 
-        self.assertTrue(self.wait_for_table_active(TABLE_NAME))
+        self.assertTrue(self.wait_for_table_active(tname))
 
-        with self.assertRaises(exceptions.BadRequest) as r_exc:
-            headers, body = self.client.create_table(
-                ATTRIBUTE_DEFINITIONS,
-                TABLE_NAME,
-                KEY_SCHEMA,
-                LSI_INDEXES)
+        self._check_exception(exceptions.BadRequest, exc_message,
+                              'create_table',
+                              ATTRIBUTE_DEFINITIONS,
+                              tname,
+                              KEY_SCHEMA,
+                              LSI_INDEXES)
 
         headers, body = self.client.list_tables()
         self.assertEqual(1, len(body['tables']))
-        self.assertEqual(TABLE_NAME, body['tables'][0]['href'])
+        self.assertEqual(tname, body['tables'][0]['href'])
 
-        operations = ["get_item", "query", "query_by_index",
-                      "scan", "put_item", "describe_table", "update_item",
-                      "delete_item", "describe_table", "delete_table"]
-        for op in operations:
-            kwargs = OPERATIONS_DICT[op]['kwargs'].update(
-                {'table_name': tname})
-            getattr(self.client, OPERATIONS_DICT[op]['method'])(**kwargs)
+        self.client.put_item(tname, ITEM)
+        self.client.get_item(tname, ITEM_PRIMARY_KEY)
+        self.client.query(tname, key_conditions=KEY_CONDITIONS)
+        self.client.query(tname, key_conditions=KEY_CONDITIONS_INDEX,
+                          index_name=INDEX_NAME_N)
+        self.client.scan(tname, scan_filter=SCAN_FILTER)
+        self.client.update_item(tname, ITEM_PRIMARY_KEY, ATTRIBUTES_UPDATE)
+        self.client.delete_item(tname, ITEM_PRIMARY_KEY)
+        self.client.describe_table(tname)
+        self.client.delete_table(tname)
+        self.client.delete_table(tname)
 
-        self.assertTrue(self.wait_for_table_deleted(TABLE_NAME))
+        self.assertTrue(self.wait_for_table_deleted(tname))
+
+        self._check_exception(exceptions.NotFound, not_found_msg,
+                              'delete_table', tname)
 
         headers, body = self.client.list_tables()
         self.assertEqual(body, {'tables': []})
+
+        # checking that data in the table is not accessible after table
+        # deletion
+        headers, body = self.client.create_table(
+            ATTRIBUTE_DEFINITIONS,
+            tname,
+            KEY_SCHEMA,
+            LSI_INDEXES)
+        self.wait_for_table_active(tname)
+        self.client.put_item(tname, ITEM)
+        headers, body = self.client.query(tname, key_conditions=KEY_CONDITIONS)
+        self.assertEqual(1, body['count'])
+
+        self.client.delete_table(tname)
+        self.wait_for_table_deleted(tname)
+
+        headers, body = self.client.create_table(
+            ATTRIBUTE_DEFINITIONS,
+            tname,
+            KEY_SCHEMA,
+            LSI_INDEXES)
+        self.wait_for_table_active(tname)
+        headers, body = self.client.query(tname, key_conditions=KEY_CONDITIONS)
+        self.assertEqual(0, body['count'])
+
+        self.client.delete_table(tname)
+        self.wait_for_table_deleted(tname)
 
 #    def setUp(self):
 #        super(MagnetoDBListTableTestCase, self).setUp()
