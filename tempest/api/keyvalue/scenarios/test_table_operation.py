@@ -14,6 +14,7 @@
 #    under the License.
 
 import base64
+import copy
 
 from tempest.api.keyvalue.rest_base.base import MagnetoDBTestCase
 from tempest.common.utils.data_utils import rand_name
@@ -149,6 +150,14 @@ ITEM = {
     "inumber": {"N": "1"},
     "istr": {"S": "1"},
     "iblob": {"B": base64.b64encode('\x01')}
+}
+
+ITEM_ALT = {
+    "hash_attr": {"S": "2"},
+    "range_attr": {"S": "2"},
+    "inumber": {"N": "2"},
+    "istr": {"S": "2"},
+    "iblob": {"B": base64.b64encode('\x02')}
 }
 
 ATTRIBUTES_UPDATE = {
@@ -290,6 +299,7 @@ class MagnetoDBItemsOperationsTestCase(MagnetoDBTestCase):
 
         self.wait_for_table_active(tname)
 
+        # retrive non-existing
         headers, body = self.client.get_item(tname, ITEM_PRIMARY_KEY)
         self.assertEqual({}, body)
         headers, body = self.client.query(tname, key_conditions=KEY_CONDITIONS)
@@ -297,14 +307,110 @@ class MagnetoDBItemsOperationsTestCase(MagnetoDBTestCase):
         headers, body = self.client.scan(tname, scan_filter=SCAN_FILTER)
         self.assertEqual(0, body['count'])
 
+        # put item
         self.client.put_item(tname, ITEM)
         self.client.put_item(tname, ITEM)
 
         headers, body = self.client.get_item(tname, ITEM_PRIMARY_KEY)
         self.assertEqual(ITEM, body['item'])
         headers, body = self.client.query(tname, key_conditions=KEY_CONDITIONS)
+        self.assertEqual(1, len(body['items']))
         self.assertEqual(ITEM, body['items'][0])
         headers, body = self.client.scan(tname, scan_filter=SCAN_FILTER)
+        self.assertEqual(1, len(body['items']))
         self.assertEqual(ITEM, body['items'][0])
 
+        # extend this test after fixing bug #1348336
+
+        # update item
         self.client.update_item(tname, ITEM_PRIMARY_KEY, ATTRIBUTES_UPDATE)
+        updated_item = self._local_update(ITEM, ATTRIBUTES_UPDATE)
+
+        headers, body = self.client.get_item(tname, ITEM_PRIMARY_KEY)
+        self.assertEqual(updated_item, body['item'])
+
+        # delete item
+        self.client.delete_item(tname, ITEM_PRIMARY_KEY)
+
+        headers, body = self.client.get_item(tname, ITEM_PRIMARY_KEY)
+        self.assertEqual({}, body)
+        headers, body = self.client.query(tname, key_conditions=KEY_CONDITIONS)
+        self.assertEqual(0, body['count'])
+        headers, body = self.client.scan(tname, scan_filter=SCAN_FILTER)
+        self.assertEqual(0, body['count'])
+
+        # check for no exception
+        self.client.delete_item(tname, ITEM_PRIMARY_KEY)
+
+    def test_items_indexed_table(self):
+        tname = rand_name().replace('-', '')
+
+        headers, body = self.client.create_table(
+            ATTRIBUTE_DEFINITIONS,
+            tname,
+            KEY_SCHEMA,
+            LSI_INDEXES)
+
+        self.wait_for_table_active(tname)
+
+        # retrive non-existing
+        headers, body = self.client.get_item(tname, ITEM_PRIMARY_KEY)
+        self.assertEqual({}, body)
+        headers, body = self.client.query(tname, key_conditions=KEY_CONDITIONS)
+        self.assertEqual(0, body['count'])
+        headers, body = self.client.query(tname,
+                                          key_conditions=KEY_CONDITIONS_INDEX,
+                                          index_name=INDEX_NAME_N)
+        self.assertEqual(0, body['count'])
+        headers, body = self.client.scan(tname, scan_filter=SCAN_FILTER)
+        self.assertEqual(0, body['count'])
+
+        # put item
+        self.client.put_item(tname, ITEM)
+        self.client.put_item(tname, ITEM)
+
+        headers, body = self.client.get_item(tname, ITEM_PRIMARY_KEY)
+        self.assertEqual(ITEM, body['item'])
+        headers, body = self.client.query(tname, key_conditions=KEY_CONDITIONS)
+        self.assertEqual(1, len(body['items']))
+        self.assertEqual(ITEM, body['items'][0])
+        headers, body = self.client.query(tname,
+                                          key_conditions=KEY_CONDITIONS_INDEX,
+                                          index_name=INDEX_NAME_N)
+        self.assertEqual(1, len(body['items']))
+        self.assertEqual(ITEM, body['items'][0])
+        headers, body = self.client.scan(tname, scan_filter=SCAN_FILTER)
+        self.assertEqual(1, len(body['items']))
+        self.assertEqual(ITEM, body['items'][0])
+
+        # extend this test after fixing bug #1348336
+
+        # update item
+        self.client.update_item(tname, ITEM_PRIMARY_KEY, ATTRIBUTES_UPDATE)
+        updated_item = self._local_update(ITEM, ATTRIBUTES_UPDATE)
+
+        headers, body = self.client.get_item(tname, ITEM_PRIMARY_KEY)
+        self.assertEqual(updated_item, body['item'])
+
+        # delete item
+        self.client.delete_item(tname, ITEM_PRIMARY_KEY)
+
+        headers, body = self.client.get_item(tname, ITEM_PRIMARY_KEY)
+        self.assertEqual({}, body)
+        headers, body = self.client.query(tname, key_conditions=KEY_CONDITIONS)
+        self.assertEqual(0, body['count'])
+        headers, body = self.client.query(tname,
+                                          key_conditions=KEY_CONDITIONS_INDEX,
+                                          index_name=INDEX_NAME_N)
+        self.assertEqual(0, body['count'])
+        headers, body = self.client.scan(tname, scan_filter=SCAN_FILTER)
+        self.assertEqual(0, body['count'])
+
+        # check for no exception
+        self.client.delete_item(tname, ITEM_PRIMARY_KEY)
+
+    def _local_update(self, item, attr_update): 
+        updated_item = copy.copy(item)
+        updated_item.update({k: v['value'] for k, v in attr_update.iteritems()
+                             if v['action']=='PUT'})
+        return updated_item
