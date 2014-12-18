@@ -17,18 +17,34 @@ from tempest import auth
 from tempest import clients
 from tempest import config_magnetodb as config
 from tempest.services.keyvalue.json import magnetodb_client
+from tempest.services.keyvalue.json import magnetodb_streaming_client
+from tempest.services.keyvalue.json import magnetodb_management_client
+from tempest.services.keyvalue.json import magnetodb_monitoring_client
 
 
 CONF = config.CONF
 
 
 class Manager(clients.Manager):
+
     def __init__(self, credentials=None, interface='json', service=None):
         super(Manager, self).__init__(credentials, interface, service)
         auth_provider = self.get_auth_provider(self.credentials)
         if interface == 'json':
             self.magnetodb_client = (
-                    magnetodb_client.MagnetoDBClientJSON(auth_provider)
+                magnetodb_client.MagnetoDBClientJSON(auth_provider)
+            )
+            self.magnetodb_streaming_client = (
+                magnetodb_streaming_client.MagnetoDBStreamingClientJSON(
+                    auth_provider)
+            )
+            self.magnetodb_management_client = (
+                magnetodb_management_client.MagnetoDBManagementClientJSON(
+                    auth_provider)
+            )
+            self.magnetodb_monitoring_client = (
+                magnetodb_monitoring_client.MagnetoDBMonitoringClientJSON(
+                    auth_provider)
             )
 
 

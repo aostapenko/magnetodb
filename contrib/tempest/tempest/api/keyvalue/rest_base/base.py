@@ -46,8 +46,8 @@ class MagnetoDBTestCase(test.BaseTestCase):
         cls.monitoring_client = cls.os.magnetodb_monitoring_client
         cls.management_client = cls.os.magnetodb_management_client
 
-    cls._sequence = -1
-    cls._resource_trash_bin = {}
+        cls._sequence = -1
+        cls._resource_trash_bin = {}
         cls._set_attrs()
 
     @classmethod
@@ -205,8 +205,8 @@ class MagnetoDBTestCase(test.BaseTestCase):
         message = r_exc.exception._error_string
         self.assertIn(expected_message, message)
 
-    @staticmethod
-    def _set_attrs():
+    @classmethod
+    def _set_attrs(cls):
         cls.hashkey = 'forum'
         cls.rangekey = 'subject'
 

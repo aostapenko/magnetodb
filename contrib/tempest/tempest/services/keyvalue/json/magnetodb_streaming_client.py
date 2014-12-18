@@ -16,20 +16,16 @@
 import json
 
 from tempest.common import rest_client
-from tempest import config
+from tempest import config_magnetodb as config
 
 
-CONF = config.TempestConfig()
+CONF = config.CONF
 
 
 class MagnetoDBStreamingClientJSON(rest_client.RestClient):
 
-    def __init__(self, config, user, password, auth_url, tenant_name=None,
-                 auth_version='v2'):
-
-        super(MagnetoDBStreamingClientJSON, self).__init__(
-            config, user, password, auth_url, tenant_name, auth_version)
-
+    def __init__(self, *args, **kwargs):
+        super(MagnetoDBStreamingClientJSON, self).__init__(*args, **kwargs)
         self.service = CONF.magnetodb_streaming.service_type
 
     def upload_items(self, table_name, items):
@@ -38,5 +34,5 @@ class MagnetoDBStreamingClientJSON(rest_client.RestClient):
 
     def upload_raw_stream(self, table_name, stream):
         url = '/'.join(['tables', table_name, 'bulk_load'])
-        resp, body = self.post(url, stream, self.headers)
+        resp, body = self.post(url, stream)
         return resp, self._parse_resp(body)

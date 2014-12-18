@@ -14,31 +14,27 @@
 # under the License.
 
 from tempest.common import rest_client
-from tempest import config
+from tempest import config_magnetodb as config
 
 
-CONF = config.TempestConfig()
+CONF = config.CONF
 
 
 class MagnetoDBManagementClientJSON(rest_client.RestClient):
 
-    def __init__(self, config, user, password, auth_url, tenant_name=None,
-                 auth_version='v2'):
-
-        super(MagnetoDBManagementClientJSON, self).__init__(
-            config, user, password, auth_url, tenant_name, auth_version)
-
+    def __init__(self, *args, **kwargs):
+        super(MagnetoDBManagementClientJSON, self).__init__(*args, **kwargs)
         self.service = CONF.magnetodb_management.service_type
 
     def create_backup(self, table_name, backup_name):
         url = '/'.join([self.tenant_id, table_name, 'backups'])
         request_body = "{{\"backup_name\": \"{}\"}}".format(backup_name)
-        resp, body = self.post(url, request_body, self.headers)
+        resp, body = self.post(url, request_body)
         return resp, self._parse_resp(body)
 
     def describe_backup(self, table_name, backup_id):
         url = '/'.join([self.tenant_id, table_name, 'backups', backup_id])
-        resp, body = self.get(url, self.headers)
+        resp, body = self.get(url)
         return resp, self._parse_resp(body)
 
     def list_backups(self, table_name, limit=None,
@@ -55,24 +51,24 @@ class MagnetoDBManagementClientJSON(rest_client.RestClient):
                         exclusive_start_backup_id)
         url += add_url
 
-        resp, body = self.get(url, self.headers)
+        resp, body = self.get(url)
         return resp, self._parse_resp(body)
 
     def delete_backup(self, table_name, backup_id):
         url = '/'.join([self.tenant_id, table_name, 'backups', backup_id])
-        resp, body = self.delete(url, self.headers)
+        resp, body = self.delete(url)
         return resp, self._parse_resp(body)
 
     def create_restore_job(self, table_name, backup_id):
         url = '/'.join([self.tenant_id, table_name, 'restores'])
         request_body = "{{\"backup_id\": \"{}\"}}".format(backup_id)
-        resp, body = self.post(url, request_body, self.headers)
+        resp, body = self.post(url, request_body)
         return resp, self._parse_resp(body)
 
     def describe_restore_job(self, table_name, restore_job_id):
         url = '/'.join([self.tenant_id, table_name,
                         'restores', restore_job_id])
-        resp, body = self.get(url, self.headers)
+        resp, body = self.get(url)
         return resp, self._parse_resp(body)
 
     def list_restore_jobs(self, table_name, limit=None,
@@ -90,5 +86,5 @@ class MagnetoDBManagementClientJSON(rest_client.RestClient):
                         exclusive_start_restore_job_id)
         url += add_url
 
-        resp, body = self.get(url, self.headers)
+        resp, body = self.get(url)
         return resp, self._parse_resp(body)

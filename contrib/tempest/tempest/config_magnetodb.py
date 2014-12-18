@@ -70,7 +70,7 @@ class TempestConfigPrivateMagnetoDB(config.TempestConfigPrivate):
 
     # manila's config wrap over standard config
     def __init__(self, parse_conf=True):
-        super(TempestConfigPrivateManila, self).__init__()
+        super(TempestConfigPrivateMagnetoDB, self).__init__()
         config.register_opt_group(cfg.CONF, magnetodb_group, MagnetoDBGroup)
         config.register_opt_group(cfg.CONF, magnetodb_streaming_group,
                                   MagnetoDBStreamingGroup)

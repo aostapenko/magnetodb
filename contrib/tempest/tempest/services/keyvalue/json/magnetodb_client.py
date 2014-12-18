@@ -17,13 +17,18 @@
 import json
 
 from tempest.common import rest_client
-from tempest import config
+from tempest import config_magnetodb as config
 
 
-CONF = config.TempestConfig()
+CONF = config.CONF
 
 
 class MagnetoDBClientJSON(rest_client.RestClient):
+
+    def __init__(self, *args, **kwargs):
+        super(MagnetoDBClientJSON, self).__init__(*args, **kwargs)
+        self.service = CONF.magnetodb.service_type
+
     def create_table(self, attr_def, table_name, schema, lsi_indexes=None):
         post_body = {'attribute_definitions': attr_def,
                      'table_name': table_name,
@@ -33,7 +38,7 @@ class MagnetoDBClientJSON(rest_client.RestClient):
             if v is None:
                 del post_body[k]
         post_body = json.dumps(post_body)
-        resp, body = self.post('tables', post_body, self.headers)
+        resp, body = self.post('tables', post_body)
         return resp, self._parse_resp(body)
 
     def update_table(self, table_name):
@@ -41,7 +46,7 @@ class MagnetoDBClientJSON(rest_client.RestClient):
 
     def delete_table(self, table_name):
         url = '/'.join(['tables', table_name])
-        resp, body = self.delete(url, self.headers)
+        resp, body = self.delete(url)
         return resp, self._parse_resp(body)
 
     def list_tables(self, limit=None, exclusive_start_table_name=None):
@@ -54,12 +59,12 @@ class MagnetoDBClientJSON(rest_client.RestClient):
             add_url += (divider + 'exclusive_start_table_name=%s' %
                         exclusive_start_table_name)
         url += add_url
-        resp, body = self.get(url, self.headers)
+        resp, body = self.get(url)
         return resp, self._parse_resp(body)
 
     def describe_table(self, table_name):
         url = '/'.join(['tables', table_name])
-        resp, body = self.get(url, self.headers)
+        resp, body = self.get(url)
         return resp, self._parse_resp(body)
 
     def put_item(self, table_name, item, expected=None, time_to_live=None,
@@ -74,7 +79,7 @@ class MagnetoDBClientJSON(rest_client.RestClient):
             if v is None:
                 del post_body[k]
         post_body = json.dumps(post_body)
-        resp, body = self.post(url, post_body, self.headers)
+        resp, body = self.post(url, post_body)
         return resp, self._parse_resp(body)
 
     def update_item(self, table_name, key, attribute_updates=None,
@@ -90,7 +95,7 @@ class MagnetoDBClientJSON(rest_client.RestClient):
             if v is None:
                 del post_body[k]
         post_body = json.dumps(post_body)
-        resp, body = self.post(url, post_body, self.headers)
+        resp, body = self.post(url, post_body)
         return resp, self._parse_resp(body)
 
     def delete_item(self, table_name, key, expected=None):
@@ -101,7 +106,7 @@ class MagnetoDBClientJSON(rest_client.RestClient):
             if v is None:
                 del post_body[k]
         post_body = json.dumps(post_body)
-        resp, body = self.post(url, post_body, self.headers)
+        resp, body = self.post(url, post_body)
         return resp, self._parse_resp(body)
 
     def get_item(self, table_name, key, attributes_to_get=None,
@@ -115,7 +120,7 @@ class MagnetoDBClientJSON(rest_client.RestClient):
             if v is None:
                 del post_body[k]
         post_body = json.dumps(post_body)
-        resp, body = self.post(url, post_body, self.headers)
+        resp, body = self.post(url, post_body)
         return resp, self._parse_resp(body)
 
     def query(self, table_name, attributes_to_get=None, consistent_read=None,
@@ -135,7 +140,7 @@ class MagnetoDBClientJSON(rest_client.RestClient):
             if v is None:
                 del post_body[k]
         post_body = json.dumps(post_body)
-        resp, body = self.post(url, post_body, self.headers)
+        resp, body = self.post(url, post_body)
         return resp, self._parse_resp(body)
 
     def scan(self, table_name, attributes_to_get=None,
@@ -155,12 +160,12 @@ class MagnetoDBClientJSON(rest_client.RestClient):
             if v is None:
                 del post_body[k]
         post_body = json.dumps(post_body)
-        resp, body = self.post(url, post_body, self.headers)
+        resp, body = self.post(url, post_body)
         return resp, self._parse_resp(body)
 
     def batch_get_item(self, request_items):
         post_body = json.dumps(request_items)
-        resp, body = self.post('batch_get_item', post_body, self.headers)
+        resp, body = self.post('batch_get_item', post_body)
         return resp, self._parse_resp(body)
 
     def batch_write_item(self, request_items):
@@ -171,5 +176,5 @@ class MagnetoDBClientJSON(rest_client.RestClient):
 
     def monitoring(self, table_name):
         url = '/'.join(['tables', table_name])
-        resp, body = self.get(url, self.headers)
+        resp, body = self.get(url)
         return resp, self._parse_resp(body)

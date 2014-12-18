@@ -14,23 +14,19 @@
 # under the License.
 
 from tempest.common import rest_client
-from tempest import config
+from tempest import config_magnetodb as config
 
 
-CONF = config.TempestConfig()
+CONF = config.CONF
 
 
 class MagnetoDBMonitoringClientJSON(rest_client.RestClient):
 
-    def __init__(self, config, user, password, auth_url, tenant_name=None,
-                 auth_version='v2'):
-
-        super(MagnetoDBMonitoringClientJSON, self).__init__(
-            config, user, password, auth_url, tenant_name, auth_version)
-
+    def __init__(self, *args, **kwargs):
+        super(MagnetoDBMonitoringClientJSON, self).__init__(*args, **kwargs)
         self.service = CONF.magnetodb_monitoring.service_type
 
     def get_all_metrics(self, table_name):
         url = '/'.join([self.tenant_id, 'tables', table_name])
-        resp, body = self.get(url, self.headers)
+        resp, body = self.get(url)
         return resp, self._parse_resp(body)
