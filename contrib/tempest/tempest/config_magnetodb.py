@@ -13,18 +13,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from __future__ import print_function
-
 from oslo.config import cfg
 
 from tempest import config  # noqa
+
+CONF = config.CONF
 
 
 magnetodb_group = cfg.OptGroup(name="magnetodb",
                                title="Key-Value storage options")
 
 MagnetoDBGroup = [
-    cfg.StrOpt('service_type',
+    cfg.StrOpt('catalog_type',
                default="kv-storage",
                help="The name of the MagnetoDB service type"),
     cfg.BoolOpt('allow_tenant_isolation',
@@ -40,7 +40,7 @@ magnetodb_streaming_group = cfg.OptGroup(
     title="Key-Value storage steaming API options")
 
 MagnetoDBStreamingGroup = [
-    cfg.StrOpt('service_type',
+    cfg.StrOpt('catalog_type',
                default="kv-streaming",
                help="The name of the MagnetoDB streaming API service type"),
 ]
@@ -50,7 +50,7 @@ magnetodb_monitoring_group = cfg.OptGroup(
     title="Key-Value storage monitoring API options")
 
 MagnetoDBMonitoringGroup = [
-    cfg.StrOpt('service_type',
+    cfg.StrOpt('catalog_type',
                default="kv-monitoring",
                help="The name of the MagnetoDB monitoring API service type"),
 ]
@@ -60,7 +60,7 @@ magnetodb_management_group = cfg.OptGroup(
     title="Key-Value storage management API options")
 
 MagnetoDBManagementGroup = [
-    cfg.StrOpt('service_type',
+    cfg.StrOpt('catalog_type',
                default="kv-management",
                help="The name of the MagnetoDB management API service type"),
 ]
@@ -74,20 +74,23 @@ class TempestConfigPrivateMagnetoDB(config.TempestConfigPrivate):
         config.register_opt_group(cfg.CONF, magnetodb_group, MagnetoDBGroup)
         config.register_opt_group(cfg.CONF, magnetodb_streaming_group,
                                   MagnetoDBStreamingGroup)
-        config.register_opt_group(cfg.CONF, magnetodb_management_group,
-                                  MagnetoDBManagementGroup)
         config.register_opt_group(cfg.CONF, magnetodb_monitoring_group,
                                   MagnetoDBMonitoringGroup)
+        config.register_opt_group(cfg.CONF, magnetodb_management_group,
+                                  MagnetoDBManagementGroup)
         self.magnetodb = cfg.CONF.magnetodb
+        self.magnetodb_streaming = cfg.CONF.magnetodb_streaming
+        self.magnetodb_monitoring = cfg.CONF.magnetodb_monitoring
+        self.magnetodb_management = cfg.CONF.magnetodb_management
 
 
-class TempestConfigProxyMagnetoDB(object):                                                                                                                                  
-    _config = None                                                                                                                                                       
+class TempestConfigProxyMagnetoDB(object):
+    _config = None
 
-    def __getattr__(self, attr):                                                                                                                                         
-        if not self._config:                                                                                                                                             
-            self._config = TempestConfigPrivateMagnetoDB()                                                                                                                  
-        return getattr(self._config, attr)                                                                                                                               
+    def __getattr__(self, attr):
+        if not self._config:
+            self._config = TempestConfigPrivateMagnetoDB()
+        return getattr(self._config, attr)
 
 
 CONF = TempestConfigProxyMagnetoDB()

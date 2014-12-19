@@ -15,14 +15,14 @@
 
 from tempest import auth
 from tempest import clients
-from tempest import config_magnetodb as config
 from tempest.services.keyvalue.json import magnetodb_client
 from tempest.services.keyvalue.json import magnetodb_streaming_client
 from tempest.services.keyvalue.json import magnetodb_management_client
 from tempest.services.keyvalue.json import magnetodb_monitoring_client
 
+from oslo.config import cfg
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 class Manager(clients.Manager):

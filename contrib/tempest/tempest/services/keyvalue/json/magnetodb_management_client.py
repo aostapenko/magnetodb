@@ -13,18 +13,20 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import json
+
 from tempest.common import rest_client
 from tempest import config_magnetodb as config
 
-
 CONF = config.CONF
+rest_client.CONF = CONF
 
 
 class MagnetoDBManagementClientJSON(rest_client.RestClient):
 
     def __init__(self, *args, **kwargs):
         super(MagnetoDBManagementClientJSON, self).__init__(*args, **kwargs)
-        self.service = CONF.magnetodb_management.service_type
+        self.service = CONF.magnetodb_management.catalog_type
 
     def create_backup(self, table_name, backup_name):
         url = '/'.join([self.tenant_id, table_name, 'backups'])
@@ -88,3 +90,6 @@ class MagnetoDBManagementClientJSON(rest_client.RestClient):
 
         resp, body = self.get(url)
         return resp, self._parse_resp(body)
+
+    def _parse_resp(self, body):
+        return json.loads(body)

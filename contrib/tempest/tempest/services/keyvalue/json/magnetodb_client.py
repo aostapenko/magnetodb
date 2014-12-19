@@ -19,15 +19,14 @@ import json
 from tempest.common import rest_client
 from tempest import config_magnetodb as config
 
-
 CONF = config.CONF
-
+rest_client.CONF = CONF
 
 class MagnetoDBClientJSON(rest_client.RestClient):
 
     def __init__(self, *args, **kwargs):
         super(MagnetoDBClientJSON, self).__init__(*args, **kwargs)
-        self.service = CONF.magnetodb.service_type
+        self.service = CONF.magnetodb.catalog_type
 
     def create_table(self, attr_def, table_name, schema, lsi_indexes=None):
         post_body = {'attribute_definitions': attr_def,
@@ -178,3 +177,6 @@ class MagnetoDBClientJSON(rest_client.RestClient):
         url = '/'.join(['tables', table_name])
         resp, body = self.get(url)
         return resp, self._parse_resp(body)
+
+    def _parse_resp(self, body):
+        return json.loads(body)
