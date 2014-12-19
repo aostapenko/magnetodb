@@ -169,8 +169,7 @@ class MagnetoDBClientJSON(rest_client.RestClient):
 
     def batch_write_item(self, request_items):
         post_body = json.dumps(request_items)
-        resp, body = self.post('batch_write_item', post_body,
-                               self.headers)
+        resp, body = self.post('batch_write_item', post_body)
         return resp, self._parse_resp(body)
 
     def monitoring(self, table_name):
