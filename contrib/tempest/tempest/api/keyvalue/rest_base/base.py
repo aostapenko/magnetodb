@@ -22,6 +22,8 @@ from tempest import clients_magnetodb as clients
 from tempest.common.utils import data_utils
 from tempest.openstack.common import log as logging
 
+from unittest.case import _AssertRaisesContext
+
 
 LOG = logging.getLogger(__name__)
 test.clients = clients
@@ -52,7 +54,7 @@ class MagnetoDBTestCase(test.BaseTestCase):
 
     @classmethod
     def resource_cleanup(cls):
-        """Calls the callables added by addResourceCleanUp,
+        """Callls the callables added by addResourceCleanUp,
         when you overwire this function dont't forget to call this too.
         """
         fail_count = 0
@@ -77,7 +79,7 @@ class MagnetoDBTestCase(test.BaseTestCase):
             LOG.error('%s cleanUp operation failed', fail_count)
 
     def _delete_test_table(self, table_name, alt=False):
-        client = self.client if not alt else self.client_alt
+        client = self.client if not alt else self.alt_client
         client.delete_table(table_name)
         self.wait_for_table_deleted(table_name, alt=alt)
 
@@ -98,7 +100,7 @@ class MagnetoDBTestCase(test.BaseTestCase):
     def wait_for_table_active(self, table_name, timeout=120, interval=1,
                               alt=False):
         def check():
-            client = self.client if not alt else self.client_alt
+            client = self.client if not alt else self.alt_client
             headers, body = client.describe_table(table_name)
             if "table" in body and "table_status" in body["table"]:
                 status = body["table"]["table_status"]
@@ -111,7 +113,7 @@ class MagnetoDBTestCase(test.BaseTestCase):
     def wait_for_table_deleted(self, table_name, timeout=120, interval=1,
                                alt=False):
         def check():
-            client = self.client if not alt else self.client_alt
+            client = self.client if not alt else self.alt_client
             try:
                 headers, body = client.describe_table(table_name)
                 if "table" in body and "table_status" in body["table"]:
@@ -237,6 +239,22 @@ class MagnetoDBTestCase(test.BaseTestCase):
                 'projection': {'projection_type': 'ALL'}
             }
         ]
+
+    def assertRaises(self, excClass, callableObj=None, *args, **kwargs):
+        context = _AssertRaisesContext(excClass, self)
+        if callableObj is None:
+            return context
+        with context:
+            callableObj(*args, **kwargs)
+
+
+class MagnetoDBMultitenancyTestCase(MagnetoDBTestCase):
+
+    @classmethod
+    def resource_setup(cls):
+        super(MagnetoDBMultitenancyTestCase, cls).resource_setup()
+        cls.alt_os = clients.Manager(cls.isolated_creds.get_alt_creds())
+        cls.alt_client = cls.alt_os.magnetodb_client
 
 
 def friendly_function_name_simple(call_able):

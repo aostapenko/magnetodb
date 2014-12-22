@@ -16,7 +16,7 @@
 import base64
 import copy
 
-from tempest.api.keyvalue.rest_base.base import MagnetoDBTestCase
+from tempest.api.keyvalue.rest_base import base
 from tempest.common.utils.data_utils import rand_name
 from tempest import exceptions
 
@@ -195,7 +195,7 @@ def _local_update(item, attr_update):
     return updated_item
 
 
-class MagnetoDBTableOperationsTestCase(MagnetoDBTestCase):
+class MagnetoDBTableOperationsTestCase(base.MagnetoDBTestCase):
 
     force_tenant_isolation = True
 
@@ -312,7 +312,7 @@ class MagnetoDBTableOperationsTestCase(MagnetoDBTestCase):
         self.wait_for_table_deleted(tname)
 
 
-class MagnetoDBItemsOperationsTestCase(MagnetoDBTestCase):
+class MagnetoDBItemsOperationsTestCase(base.MagnetoDBTestCase):
 
     def test_items_non_indexed_table(self):
         tname = rand_name().replace('-', '')
@@ -542,9 +542,8 @@ class MagnetoDBItemsOperationsTestCase(MagnetoDBTestCase):
         self.wait_for_table_deleted(tname)
 
 
-class MagnetoDBMultitenancyTableTestCase(MagnetoDBTestCase):
+class MagnetoDBMultitenancyTableTestCase(base.MagnetoDBMultitenancyTestCase):
 
-    alt_tenant = True
     force_tenant_isolation = True
 
     def test_table_operations(self):
@@ -552,12 +551,12 @@ class MagnetoDBMultitenancyTableTestCase(MagnetoDBTestCase):
         url = '{url}/tables/{table}'.format(
             url=self.client.base_url, table=tname)
         url_alt = '{url}/tables/{table}'.format(
-            url=self.client_alt.base_url, table=tname)
+            url=self.alt_client.base_url, table=tname)
 
         resp, body = self.client.list_tables()
         tables = [table['href'] for table in body['tables']]
         self.assertNotIn(url, tables)
-        resp, body = self.client_alt.list_tables()
+        resp, body = self.alt_client.list_tables()
         tables_alt = [table['href'] for table in body['tables']]
         self.assertNotIn(url_alt, tables_alt)
 
@@ -566,7 +565,7 @@ class MagnetoDBMultitenancyTableTestCase(MagnetoDBTestCase):
             tname,
             KEY_SCHEMA,
             LSI_INDEXES)
-        headers, body = self.client_alt.create_table(
+        headers, body = self.alt_client.create_table(
             ATTRIBUTE_DEFINITIONS,
             tname,
             KEY_SCHEMA,
@@ -575,24 +574,24 @@ class MagnetoDBMultitenancyTableTestCase(MagnetoDBTestCase):
         resp, body = self.client.list_tables()
         tables = [table['href'] for table in body['tables']]
         self.assertIn(url, tables)
-        resp, body = self.client_alt.list_tables()
+        resp, body = self.alt_client.list_tables()
         tables_alt = [table['href'] for table in body['tables']]
         self.assertIn(url_alt, tables_alt)
 
         self.wait_for_table_active(tname)
         self.wait_for_table_active(tname, alt=True)
 
-        self.client_alt.delete_table(tname)
+        self.alt_client.delete_table(tname)
         self.wait_for_table_deleted(tname, alt=True)
 
         resp, body = self.client.list_tables()
         tables = [table['href'] for table in body['tables']]
         self.assertIn(url, tables)
-        resp, body = self.client_alt.list_tables()
+        resp, body = self.alt_client.list_tables()
         tables_alt = [table['href'] for table in body['tables']]
         self.assertNotIn(url_alt, tables_alt)
 
-        headers, body = self.client_alt.create_table(
+        headers, body = self.alt_client.create_table(
             ATTRIBUTE_DEFINITIONS,
             tname,
             KEY_SCHEMA,
@@ -602,7 +601,7 @@ class MagnetoDBMultitenancyTableTestCase(MagnetoDBTestCase):
         resp, body = self.client.list_tables()
         tables = [table['href'] for table in body['tables']]
         self.assertIn(url, tables)
-        resp, body = self.client_alt.list_tables()
+        resp, body = self.alt_client.list_tables()
         tables_alt = [table['href'] for table in body['tables']]
         self.assertIn(url_alt, tables_alt)
 
@@ -612,17 +611,16 @@ class MagnetoDBMultitenancyTableTestCase(MagnetoDBTestCase):
         resp, body = self.client.list_tables()
         tables = [table['href'] for table in body['tables']]
         self.assertNotIn(url, tables)
-        resp, body = self.client_alt.list_tables()
+        resp, body = self.alt_client.list_tables()
         tables_alt = [table['href'] for table in body['tables']]
         self.assertIn(url_alt, tables_alt)
 
-        self.client_alt.delete_table(tname)
+        self.alt_client.delete_table(tname)
         self.wait_for_table_deleted(tname, alt=True)
 
 
-class MagnetoDBMultitenancyItemsTestCase(MagnetoDBTestCase):
+class MagnetoDBMultitenancyItemsTestCase(base.MagnetoDBMultitenancyTestCase):
 
-    alt_tenant = True
     force_tenant_isolation = True
 
     def test_item_operations(self):
@@ -631,7 +629,7 @@ class MagnetoDBMultitenancyItemsTestCase(MagnetoDBTestCase):
         resp, body = self.client.list_tables()
         tables = [table['href'] for table in body['tables']]
         self.assertNotIn(tname, tables)
-        resp, body = self.client_alt.list_tables()
+        resp, body = self.alt_client.list_tables()
         tables_alt = [table['href'] for table in body['tables']]
         self.assertNotIn(tname, tables_alt)
 
@@ -646,63 +644,63 @@ class MagnetoDBMultitenancyItemsTestCase(MagnetoDBTestCase):
 
         not_found_msg = "'%s' does not exist" % tname
         self._check_exception(exceptions.NotFound, not_found_msg,
-                              self.client_alt.get_item, tname,
+                              self.alt_client.get_item, tname,
                               ITEM_PRIMARY_KEY)
         self._check_exception(exceptions.NotFound, not_found_msg,
-                              self.client_alt.put_item, tname,
+                              self.alt_client.put_item, tname,
                               ITEM)
         self._check_exception(exceptions.NotFound, not_found_msg,
-                              self.client_alt.update_item, tname,
+                              self.alt_client.update_item, tname,
                               ITEM_PRIMARY_KEY, ATTRIBUTES_UPDATE)
         self._check_exception(exceptions.NotFound, not_found_msg,
-                              self.client_alt.delete_item, tname,
+                              self.alt_client.delete_item, tname,
                               ITEM_PRIMARY_KEY)
 
-        headers, body = self.client_alt.create_table(
+        headers, body = self.alt_client.create_table(
             ATTRIBUTE_DEFINITIONS,
             tname,
             KEY_SCHEMA,
             LSI_INDEXES)
         self.wait_for_table_active(tname, alt=True)
 
-        headers, body = self.client_alt.get_item(tname, ITEM_PRIMARY_KEY)
+        headers, body = self.alt_client.get_item(tname, ITEM_PRIMARY_KEY)
         self.assertEqual({}, body)
 
         item = copy.copy(ITEM_PRIMARY_KEY)
         item.update(ADDITIONAL_FIELDS_ALT)
-        self.client_alt.put_item(tname, item)
+        self.alt_client.put_item(tname, item)
 
         headers, body = self.client.get_item(tname, ITEM_PRIMARY_KEY)
         self.assertEqual({'item': ITEM}, body)
 
-        headers, body = self.client_alt.get_item(tname, ITEM_PRIMARY_KEY)
+        headers, body = self.alt_client.get_item(tname, ITEM_PRIMARY_KEY)
         self.assertEqual({'item': item}, body)
 
-        self.client_alt.update_item(tname, ITEM_PRIMARY_KEY, ATTRIBUTES_UPDATE)
+        self.alt_client.update_item(tname, ITEM_PRIMARY_KEY, ATTRIBUTES_UPDATE)
 
         headers, body = self.client.get_item(tname, ITEM_PRIMARY_KEY)
         self.assertEqual({'item': ITEM}, body)
 
-        headers, body = self.client_alt.get_item(tname, ITEM_PRIMARY_KEY)
+        headers, body = self.alt_client.get_item(tname, ITEM_PRIMARY_KEY)
         updated_item = _local_update(item, ATTRIBUTES_UPDATE)
         self.assertEqual({'item': updated_item}, body)
 
-        self.client_alt.delete_item(tname, ITEM_PRIMARY_KEY)
+        self.alt_client.delete_item(tname, ITEM_PRIMARY_KEY)
 
         headers, body = self.client.get_item(tname, ITEM_PRIMARY_KEY)
         self.assertEqual({'item': ITEM}, body)
 
-        headers, body = self.client_alt.get_item(tname, ITEM_PRIMARY_KEY)
+        headers, body = self.alt_client.get_item(tname, ITEM_PRIMARY_KEY)
         self.assertEqual({}, body)
 
-        self.client_alt.delete_table(tname)
+        self.alt_client.delete_table(tname)
         self.wait_for_table_deleted(tname, alt=True)
 
         headers, body = self.client.get_item(tname, ITEM_PRIMARY_KEY)
         self.assertEqual({'item': ITEM}, body)
         # uncomment when fixed
 #        self._check_exception(exceptions.NotFound, not_found_msg,
-#                              self.client_alt.get_item, tname,
+#                              self.alt_client.get_item, tname,
 #                              ITEM_PRIMARY_KEY)
 
         self.client.delete_table(tname)
