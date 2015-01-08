@@ -21,6 +21,7 @@ from magnetodb.common import probe
 from magnetodb.openstack.common import log as logging
 from magnetodb import storage
 
+from magnetodb.common.external_storage import swift_api
 
 LOG = logging.getLogger(__name__)
 
@@ -32,6 +33,8 @@ class ListTablesController():
     @api.enforce_policy("mdb:list_tables")
     @probe.Probe(__name__)
     def list_tables(self, req, project_id):
+        a = swift_api.SwiftAPI()
+        a.export_data(req.context, '')
         params = req.params.copy()
 
         exclusive_start_table_name = params.pop(

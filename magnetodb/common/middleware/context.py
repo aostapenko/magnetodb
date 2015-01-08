@@ -39,11 +39,12 @@ class ContextMiddleware(wsgi.Middleware):
         if roles:
             roles = roles.split(',')
 
-        return context.RequestContext(auth_token=auth_token,
+        ctxt = context.RequestContext(auth_token=auth_token,
                                       user=user_id,
                                       tenant=tenant_name,
                                       is_admin=is_admin,
                                       roles=roles)
+        return ctxt
 
     def process_request(self, req):
         """
@@ -59,6 +60,7 @@ class ContextMiddleware(wsgi.Middleware):
                                         user_id=user_id,
                                         tenant_id=tenant_id,
                                         roles=roles)
+        req.context.token_info = req.environ['keystone.token_info']
 
     @classmethod
     def factory_method(cls, global_config, **local_config):
